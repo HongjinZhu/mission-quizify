@@ -35,7 +35,7 @@ embed_config = {
 ### Running the Streamlit Application
 
 ```sh
-streamlit run main.py
+streamlit run final_version.py
 ```
 
 ## Usage
