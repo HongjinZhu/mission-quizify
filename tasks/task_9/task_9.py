@@ -27,7 +27,8 @@ class QuizManager:
         Note: This initialization method is crucial for setting the foundation of the `QuizManager` class, enabling it to manage the quiz questions effectively. The class will rely on this setup to perform operations such as retrieving specific questions by index and navigating through the quiz.
         """
         ##### YOUR CODE HERE #####
-        pass # Placeholder
+        self.questions = questions
+        self.total_questions = len(questions)
     ##########################################################
 
     def get_question_at_index(self, index: int):
@@ -62,7 +63,16 @@ class QuizManager:
         Note: Ensure that `st.session_state["question_index"]` is initialized before calling this method. This navigation method enhances the user experience by providing fluid access to quiz questions.
         """
         ##### YOUR CODE HERE #####
-        pass  # Placeholder for implementation
+        # ensure `st.session_state["question_index"]` is initialized 
+        if "question_index" not in st.session_state:
+            st.session_state["question_index"] = 0
+
+        # retrieve idx of current question
+        cur_idx = st.session_state["question_index"]
+        new_index = (cur_idx + direction) % self.total_questions
+        
+        # update `question_index`
+        st.session_state["question_index"] = new_index
     ##########################################################
 
 
@@ -71,7 +81,7 @@ if __name__ == "__main__":
     
     embed_config = {
         "model_name": "textembedding-gecko@003",
-        "project": "YOUR-PROJECT-ID-HERE",
+        "project": "sample-mission-424819",
         "location": "us-central1"
     }
     
@@ -102,7 +112,7 @@ if __name__ == "__main__":
                 st.write(topic_input)
                 
                 # Test the Quiz Generator
-                generator = QuizGenerator(topic_input, questions, chroma_creator)
+                generator = QuizGenerator(topic_input, questions, chroma_creator.db)
                 question_bank = generator.generate_quiz()
 
     if question_bank:
@@ -112,11 +122,15 @@ if __name__ == "__main__":
             
             # Task 9
             ##########################################################
-            quiz_manager = # Use our new QuizManager class
+            quiz_manager = QuizManager(question_bank) # Use our new QuizManager class
             # Format the question and display
             with st.form("Multiple Choice Question"):
                 ##### YOUR CODE HERE #####
-                index_question = # Use the get_question_at_index method to set the 0th index
+                if "question_index" not in st.session_state:
+                    st.session_state["question_index"] = 0
+                
+                index = st.session_state["question_index"]
+                index_question = quiz_manager.get_question_at_index(index)# Use the get_question_at_index method to set the 0th index
                 ##### YOUR CODE HERE #####
                 
                 # Unpack choices for radio
@@ -126,17 +140,20 @@ if __name__ == "__main__":
                     # Set the key from the index question 
                     # Set the value from the index question
                     ##### YOUR CODE HERE #####
+                    key = choice['key']
+                    value = choice['value']
                     choices.append(f"{key}) {value}")
                 
                 ##### YOUR CODE HERE #####
                 # Display the question onto streamlit
                 ##### YOUR CODE HERE #####
-                
-                answer = st.radio( # Display the radio button with the choices
-                    'Choose the correct answer',
+                st.write(f"{st.session_state['question_index'] + 1}. {index_question['question']}")
+                answer = st.radio(
+                    "Choose an answer",
                     choices
                 )
                 st.form_submit_button("Submit")
+                # print(submit_ans)
                 
                 if submitted: # On click submit 
                     correct_answer_key = index_question['answer']
@@ -144,4 +161,9 @@ if __name__ == "__main__":
                         st.success("Correct!")
                     else:
                         st.error("Incorrect!")
+                
+                # if st.form_submit_button("Next"):
+                #     quiz_manager.next_question_index(1)
+                # elif st.form_submit_button("Previous"):
+                #     quiz_manager.next_question_index(-1)
             ##########################################################

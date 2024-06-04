@@ -102,6 +102,14 @@ class QuizGenerator:
         # Invoke the chain with the topic as input
         response = chain.invoke(self.topic)
         return response
+    
+    def clean_response(self, response: str) -> str:
+        response = response.strip()
+        if not response.startswith('{'):
+            response = response[response.find('{'):]
+        if not response.endswith('}'):
+            response = response[:response.rfind('}') + 1]
+        return response
 
     def generate_quiz(self) -> list:
         """
@@ -122,27 +130,30 @@ class QuizGenerator:
         Note: This method relies on `generate_question_with_vectorstore` for question generation and `validate_question` for ensuring question uniqueness. Ensure `question_bank` is properly initialized and managed.
         """
         self.question_bank = [] # Reset the question bank
+        retry_limit = 10
 
         for _ in range(self.num_questions):
             ##### YOUR CODE HERE #####
-            question_str = # Use class method to generate question
-            
-            ##### YOUR CODE HERE #####
-            try:
-                # Convert the JSON String to a dictionary
-            except json.JSONDecodeError:
-                print("Failed to decode question JSON.")
-                continue  # Skip this iteration if JSON decoding fails
-            ##### YOUR CODE HERE #####
+            retries = 0
+            while retries < retry_limit:
+                question_str = self.generate_question_with_vectorstore() # Use class method to generate question
+                question_str = self.clean_response(question_str)
 
-            ##### YOUR CODE HERE #####
-            # Validate the question using the validate_question method
-            if self.validate_question(question):
-                print("Successfully generated unique question")
-                # Add the valid and unique question to the bank
-            else:
-                print("Duplicate or invalid question detected.")
-            ##### YOUR CODE HERE #####
+                try:
+                    question = json.loads(question_str)
+                except json.JSONDecodeError:
+                    print("Failed to decode question JSON.")
+                    # print(f"Response was: {question_str}")
+                    retries += 1
+                    continue  # Skip this iteration if JSON decoding fails
+
+                if self.validate_question(question):
+                    print("Successfully generated unique question")
+                    self.question_bank.append(question)
+                    break  # exit the retry loop
+                else:
+                    print("Duplicate or invalid question detected.")
+                    retries += 1
 
         return self.question_bank
 
@@ -170,6 +181,15 @@ class QuizGenerator:
         # Consider missing 'question' key as invalid in the dict object
         # Check if a question with the same text already exists in the self.question_bank
         ##### YOUR CODE HERE #####
+        question_text = question.get("question")
+        if not question_text:
+            return False
+        
+        is_unique = True
+        for q in self.question_bank:
+            if q.get("question") == question_text:
+                is_unique = False
+                break
         return is_unique
 
 
@@ -178,7 +198,7 @@ if __name__ == "__main__":
     
     embed_config = {
         "model_name": "textembedding-gecko@003",
-        "project": "YOUR-PROJECT-ID-HERE",
+        "project": "sample-mission-424819",
         "location": "us-central1"
     }
     
@@ -209,7 +229,7 @@ if __name__ == "__main__":
                 st.write(topic_input)
                 
                 # Test the Quiz Generator
-                generator = QuizGenerator(topic_input, questions, chroma_creator)
+                generator = QuizGenerator(topic_input, questions, chroma_creator.db)
                 question_bank = generator.generate_quiz()
                 question = question_bank[0]
 
